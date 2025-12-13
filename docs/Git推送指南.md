@@ -74,7 +74,7 @@ git add .
 ### 步骤 3：创建初始提交
 
 ```bash
-git commit -m "Initial commit: CosyVoice project with GPU selection support"
+git commit -m "第一次提交"
 ```
 
 ### 步骤 4：添加远程仓库

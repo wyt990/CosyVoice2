@@ -32,8 +32,14 @@ class CosyVoiceModel:
                  llm: torch.nn.Module,
                  flow: torch.nn.Module,
                  hift: torch.nn.Module,
-                 fp16: bool = False):
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+                 fp16: bool = False,
+                 device_id: int = None):
+        if device_id is not None and torch.cuda.is_available():
+            if device_id >= torch.cuda.device_count():
+                raise ValueError(f'GPU {device_id} is not available. Only {torch.cuda.device_count()} GPU(s) available.')
+            self.device = torch.device(f'cuda:{device_id}')
+        else:
+            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         self.llm = llm
         self.flow = flow
         self.hift = hift
@@ -243,15 +249,10 @@ class CosyVoice2Model(CosyVoiceModel):
                  llm: torch.nn.Module,
                  flow: torch.nn.Module,
                  hift: torch.nn.Module,
-                 fp16: bool = False):
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
-        self.llm = llm
-        self.flow = flow
-        self.hift = hift
-        self.fp16 = fp16
-        if self.fp16 is True:
-            self.llm.half()
-            self.flow.half()
+                 fp16: bool = False,
+                 device_id: int = None):
+        super().__init__(llm, flow, hift, fp16, device_id=device_id)
+        # Note: fp16 conversion is already done in parent class __init__
         # NOTE must matching training static_chunk_size
         self.token_hop_len = 25
         # hift cache

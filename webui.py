@@ -183,12 +183,27 @@ if __name__ == '__main__':
                         type=str,
                         default='pretrained_models/CosyVoice2-0.5B',
                         help='local path or modelscope repo id')
+    parser.add_argument('--gpu',
+                        type=int,
+                        default=None,
+                        help='GPU device ID to use (e.g., 0 or 1). If not specified, uses default GPU (GPU 0)')
     args = parser.parse_args()
+    
+    # Set CUDA device if specified
+    if args.gpu is not None:
+        if torch.cuda.is_available():
+            if args.gpu >= torch.cuda.device_count():
+                raise ValueError(f'GPU {args.gpu} is not available. Only {torch.cuda.device_count()} GPU(s) available.')
+            torch.cuda.set_device(args.gpu)
+            logging.info(f'Using GPU {args.gpu}')
+        else:
+            logging.warning(f'CUDA is not available, ignoring --gpu {args.gpu} argument')
+    
     try:
-        cosyvoice = CosyVoice(args.model_dir)
+        cosyvoice = CosyVoice(args.model_dir, device_id=args.gpu)
     except Exception:
         try:
-            cosyvoice = CosyVoice2(args.model_dir)
+            cosyvoice = CosyVoice2(args.model_dir, device_id=args.gpu)
         except Exception:
             raise TypeError('no valid model_type!')
 

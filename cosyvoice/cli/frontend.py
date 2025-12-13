@@ -44,17 +44,27 @@ class CosyVoiceFrontEnd:
                  campplus_model: str,
                  speech_tokenizer_model: str,
                  spk2info: str = '',
-                 allowed_special: str = 'all'):
+                 allowed_special: str = 'all',
+                 device_id: int = None):
         self.tokenizer = get_tokenizer()
         self.feat_extractor = feat_extractor
-        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        if device_id is not None and torch.cuda.is_available():
+            if device_id >= torch.cuda.device_count():
+                raise ValueError(f'GPU {device_id} is not available. Only {torch.cuda.device_count()} GPU(s) available.')
+            self.device = torch.device(f'cuda:{device_id}')
+        else:
+            self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         option = onnxruntime.SessionOptions()
         option.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
         option.intra_op_num_threads = 1
         self.campplus_session = onnxruntime.InferenceSession(campplus_model, sess_options=option, providers=["CPUExecutionProvider"])
+        # Set CUDA device for ONNX Runtime if GPU is specified
+        if device_id is not None and torch.cuda.is_available():
+            providers = [("CUDAExecutionProvider", {"device_id": device_id}), "CPUExecutionProvider"]
+        else:
+            providers = ["CUDAExecutionProvider" if torch.cuda.is_available() else "CPUExecutionProvider"]
         self.speech_tokenizer_session = onnxruntime.InferenceSession(speech_tokenizer_model, sess_options=option,
-                                                                     providers=["CUDAExecutionProvider" if torch.cuda.is_available() else
-                                                                                "CPUExecutionProvider"])
+                                                                     providers=providers)
         if os.path.exists(spk2info):
             self.spk2info = torch.load(spk2info, map_location=self.device)
         else:

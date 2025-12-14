@@ -308,6 +308,11 @@ git clone https://www.modelscope.cn/iic/CosyVoice-300M.git pretrained_models/Cos
 git clone https://www.modelscope.cn/iic/CosyVoice-300M-SFT.git pretrained_models/CosyVoice-300M-SFT
 git clone https://www.modelscope.cn/iic/CosyVoice-300M-Instruct.git pretrained_models/CosyVoice-300M-Instruct
 git clone https://www.modelscope.cn/iic/CosyVoice-ttsfrd.git pretrained_models/CosyVoice-ttsfrd
+
+modelscope download --model iic/CosyVoice-300M-SFT --local_dir ./CosyVoice-300M-SFT
+modelscope download --model iic/CosyVoice-300M-Instruct --local_dir ./CosyVoice-300M-Instruct
+modelscope download --model iic/CosyVoice-ttsfrd --local_dir ./CosyVoice-ttsfrd
+
 ```
 
 可选地，您可以解压 `ttsfrd` 资源并安装 `ttsfrd` 包以获得更好的文本规范化性能。

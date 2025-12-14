@@ -9,8 +9,11 @@
 3. [方法二：推送到已存在的 Git 仓库](#方法二推送到已存在的-git-仓库)
 4. [方法三：保留原仓库历史并添加新远程仓库](#方法三保留原仓库历史并添加新远程仓库)
 5. [处理 Git 子模块](#处理-git-子模块)
-6. [常见问题解决](#常见问题解决)
-7. [完整操作示例](#完整操作示例)
+6. [拉取和同步操作](#拉取和同步操作)
+7. [覆盖和回退操作](#覆盖和回退操作)
+8. [合并和冲突解决](#合并和冲突解决)
+9. [常见问题解决](#常见问题解决)
+10. [完整操作示例](#完整操作示例)
 
 ---
 
@@ -74,7 +77,7 @@ git add .
 ### 步骤 3：创建初始提交
 
 ```bash
-git commit -m "第一次提交"
+git commit -m "完善文档"
 ```
 
 ### 步骤 4：添加远程仓库
@@ -235,6 +238,364 @@ git submodule update --init --recursive
 
 ---
 
+## 拉取和同步操作
+
+### 拉取远程更新（Pull）
+
+**拉取并自动合并**：
+
+```bash
+# 从远程仓库拉取最新更改并自动合并
+git pull origin main
+
+# 如果当前分支已设置跟踪，可以直接使用
+git pull
+```
+
+**只拉取不合并（Fetch）**：
+
+```bash
+# 只获取远程更新，不自动合并
+git fetch origin
+
+# 查看远程分支的更新
+git fetch origin main
+
+# 查看所有远程仓库的更新
+git fetch --all
+```
+
+**查看拉取的更新**：
+
+```bash
+# 查看远程分支和本地分支的差异
+git log HEAD..origin/main
+
+# 查看具体的文件差异
+git diff HEAD origin/main
+
+# 查看远程分支列表
+git branch -r
+```
+
+### 同步多个远程仓库
+
+如果您配置了多个远程仓库（如原仓库和您的仓库）：
+
+```bash
+# 查看所有远程仓库
+git remote -v
+
+# 从原仓库拉取更新
+git fetch upstream  # 假设原仓库名为 upstream
+
+# 查看原仓库的更新
+git log HEAD..upstream/main
+
+# 合并原仓库的更新到当前分支
+git merge upstream/main
+
+# 推送到自己的仓库
+git push origin main
+```
+
+### 拉取特定分支
+
+```bash
+# 拉取远程的特定分支
+git fetch origin feature-branch
+
+# 切换到远程分支（创建本地跟踪分支）
+git checkout -b feature-branch origin/feature-branch
+
+# 或者直接拉取并切换
+git pull origin feature-branch
+```
+
+### 更新子模块
+
+```bash
+# 更新所有子模块到最新版本
+git submodule update --remote
+
+# 更新特定子模块
+git submodule update --remote third_party/Matcha-TTS
+
+# 拉取子模块的更新
+cd third_party/Matcha-TTS
+git pull origin main
+cd ../..
+```
+
+---
+
+## 覆盖和回退操作
+
+### 覆盖本地更改（使用远程版本）
+
+**场景 1：放弃本地未提交的更改，使用远程版本**
+
+```bash
+# 查看有哪些文件被修改
+git status
+
+# 放弃所有未提交的更改
+git reset --hard HEAD
+
+# 拉取远程更新并覆盖本地
+git fetch origin
+git reset --hard origin/main
+```
+
+**场景 2：覆盖特定文件**
+
+```bash
+# 从远程仓库恢复特定文件
+git checkout origin/main -- path/to/file
+
+# 或者使用 restore（Git 2.23+）
+git restore --source=origin/main path/to/file
+```
+
+### 覆盖远程仓库（强制推送）
+
+⚠️ **警告**：强制推送会覆盖远程仓库的历史，请谨慎使用！
+
+```bash
+# 方法 1：强制推送（会覆盖远程分支）
+git push origin main --force
+
+# 方法 2：更安全的强制推送（如果远程有其他人的提交，会拒绝）
+git push origin main --force-with-lease
+```
+
+**使用场景**：
+- 修正错误的提交
+- 清理提交历史
+- 回退到之前的版本
+
+### 回退到之前的提交
+
+**查看提交历史**：
+
+```bash
+# 查看提交历史
+git log --oneline
+
+# 查看图形化历史
+git log --oneline --graph --all
+```
+
+**回退操作**：
+
+```bash
+# 方法 1：软回退（保留更改在暂存区）
+git reset --soft HEAD~1  # 回退 1 个提交
+
+# 方法 2：混合回退（保留更改在工作区）
+git reset --mixed HEAD~1  # 或 git reset HEAD~1
+
+# 方法 3：硬回退（完全删除更改）
+git reset --hard HEAD~1
+
+# 回退到特定提交
+git reset --hard <commit-hash>
+
+# 回退到远程版本
+git reset --hard origin/main
+```
+
+**回退后推送到远程**：
+
+```bash
+# 如果已经推送过，需要强制推送
+git push origin main --force
+```
+
+### 撤销提交但保留更改
+
+```bash
+# 撤销最后一次提交，但保留文件更改
+git reset --soft HEAD~1
+
+# 修改文件后重新提交
+git add .
+git commit -m "修正后的提交信息"
+```
+
+### 创建新提交来撤销更改（推荐用于已推送的提交）
+
+```bash
+# 创建一个新提交来撤销指定提交的更改
+git revert <commit-hash>
+
+# 撤销最后一次提交
+git revert HEAD
+
+# 撤销多个提交
+git revert HEAD~3..HEAD
+```
+
+### 清理未跟踪的文件
+
+```bash
+# 查看哪些文件会被删除
+git clean -n
+
+# 删除未跟踪的文件
+git clean -f
+
+# 删除未跟踪的文件和目录
+git clean -fd
+
+# 交互式删除
+git clean -i
+```
+
+---
+
+## 合并和冲突解决
+
+### 合并分支
+
+**基本合并**：
+
+```bash
+# 切换到主分支
+git checkout main
+
+# 合并功能分支
+git merge feature-branch
+
+# 推送到远程
+git push origin main
+```
+
+**合并策略**：
+
+```bash
+# 普通合并（创建合并提交）
+git merge feature-branch
+
+# 快进合并（不创建合并提交，如果可能）
+git merge --ff feature-branch
+
+# 只允许快进合并（如果不能快进则失败）
+git merge --ff-only feature-branch
+
+# 总是创建合并提交
+git merge --no-ff feature-branch
+
+# 压缩合并（将多个提交压缩为一个）
+git merge --squash feature-branch
+git commit -m "合并 feature-branch 的所有更改"
+```
+
+### 解决合并冲突
+
+**步骤 1：识别冲突**：
+
+```bash
+# 合并时如果出现冲突，Git 会提示
+git merge feature-branch
+# 输出：Auto-merging file.txt
+# 输出：CONFLICT (content): Merge conflict in file.txt
+```
+
+**步骤 2：查看冲突文件**：
+
+```bash
+# 查看冲突状态
+git status
+
+# 查看冲突文件内容
+cat file.txt
+```
+
+冲突标记示例：
+```
+<<<<<<< HEAD
+这是主分支的内容
+=======
+这是功能分支的内容
+>>>>>>> feature-branch
+```
+
+**步骤 3：手动解决冲突**：
+
+1. 编辑冲突文件，选择要保留的内容
+2. 删除冲突标记（`<<<<<<<`, `=======`, `>>>>>>>`）
+3. 保存文件
+
+**步骤 4：标记冲突已解决**：
+
+```bash
+# 添加解决后的文件
+git add file.txt
+
+# 完成合并
+git commit -m "解决合并冲突"
+```
+
+**步骤 5：取消合并（如果需要）**：
+
+```bash
+# 如果合并过程中想取消
+git merge --abort
+```
+
+### 使用合并工具
+
+```bash
+# 配置合并工具
+git config --global merge.tool vimdiff
+# 或使用其他工具：meld, kdiff3, vscode 等
+
+# 使用合并工具解决冲突
+git mergetool
+```
+
+### Rebase 操作（变基）
+
+**Rebase 与 Merge 的区别**：
+- **Merge**：创建合并提交，保留分支历史
+- **Rebase**：将提交重新应用到目标分支，创建线性历史
+
+**基本 Rebase**：
+
+```bash
+# 切换到功能分支
+git checkout feature-branch
+
+# 将当前分支变基到 main
+git rebase main
+
+# 如果有冲突，解决后继续
+git add .
+git rebase --continue
+
+# 如果想取消 rebase
+git rebase --abort
+```
+
+**交互式 Rebase**：
+
+```bash
+# 交互式修改最近 3 个提交
+git rebase -i HEAD~3
+
+# 在编辑器中可以：
+# - pick: 保留提交
+# - reword: 修改提交信息
+# - edit: 修改提交内容
+# - squash: 合并到上一个提交
+# - drop: 删除提交
+```
+
+**⚠️ 注意**：不要对已推送的公共分支使用 rebase！
+
+---
+
 ## 常见问题解决
 
 ### 问题 1：推送时提示 "remote origin already exists"
@@ -317,6 +678,132 @@ git submodule update --init --recursive
 # 如果子模块有问题，可以重新初始化
 git submodule deinit -f third_party/Matcha-TTS
 git submodule update --init --recursive
+```
+
+### 问题 6：推送时提示 "Permission denied" 或 "403 Forbidden"
+
+**原因**：远程仓库地址指向了原仓库，您没有推送权限。
+
+**解决方案**：
+
+```bash
+# 1. 查看当前远程仓库地址
+git remote -v
+
+# 2. 如果显示的是原仓库地址（如 FunAudioLLM/CosyVoice），需要更换
+# 移除旧的远程仓库
+git remote remove origin
+
+# 3. 添加您自己的仓库地址
+git remote add origin https://github.com/wyt990/CosyVoice2.git
+
+# 4. 验证远程仓库地址
+git remote -v
+
+# 5. 重新推送
+git push -u origin main
+```
+
+**如果仍然提示权限错误**：
+
+```bash
+# 方法 1：使用 SSH（推荐）
+# 确保已配置 SSH 密钥
+git remote set-url origin git@github.com:wyt990/CosyVoice2.git
+git push -u origin main
+
+# 方法 2：使用 Personal Access Token
+# 在 GitHub Settings > Developer settings > Personal access tokens 生成令牌
+git remote set-url origin https://<your-token>@github.com/wyt990/CosyVoice2.git
+git push -u origin main
+
+# 方法 3：使用 GitHub CLI 认证
+gh auth login
+git push -u origin main
+```
+
+### 问题 7：拉取时提示 "Your local changes would be overwritten"
+
+**解决方案**：
+
+```bash
+# 方法 1：暂存本地更改
+git stash
+git pull origin main
+git stash pop  # 恢复本地更改
+
+# 方法 2：提交本地更改后再拉取
+git add .
+git commit -m "保存本地更改"
+git pull origin main
+
+# 方法 3：放弃本地更改（谨慎使用）
+git reset --hard HEAD
+git pull origin main
+```
+
+### 问题 8：合并冲突后不知道如何解决
+
+**解决方案**：
+
+```bash
+# 1. 查看冲突文件
+git status
+
+# 2. 打开冲突文件，查找冲突标记
+# <<<<<<< HEAD
+# 当前分支的内容
+# =======
+# 要合并的分支的内容
+# >>>>>>> branch-name
+
+# 3. 手动编辑，选择要保留的内容，删除冲突标记
+
+# 4. 标记为已解决
+git add <冲突文件>
+
+# 5. 完成合并
+git commit
+
+# 如果想取消合并
+git merge --abort
+```
+
+### 问题 9：误删除了重要文件或提交
+
+**解决方案**：
+
+```bash
+# 恢复已删除但已提交的文件
+git checkout HEAD -- path/to/file
+
+# 查看已删除的文件
+git log --diff-filter=D --summary
+
+# 恢复特定提交中删除的文件
+git checkout <commit-hash>^ -- path/to/file
+
+# 使用 reflog 找回丢失的提交
+git reflog
+git checkout <commit-hash-from-reflog>
+```
+
+### 问题 10：推送后想修改提交信息
+
+**解决方案**：
+
+```bash
+# 修改最后一次提交信息（未推送）
+git commit --amend -m "新的提交信息"
+
+# 修改最后一次提交信息（已推送，需要强制推送）
+git commit --amend -m "新的提交信息"
+git push origin main --force-with-lease
+
+# 修改更早的提交信息（使用交互式 rebase）
+git rebase -i HEAD~3  # 修改最近 3 个提交
+# 在编辑器中将要修改的提交的 "pick" 改为 "reword"
+git push origin main --force-with-lease
 ```
 
 ---
@@ -471,11 +958,45 @@ git push -u origin main
 # 拉取更新
 git pull origin main
 
+# 只拉取不合并
+git fetch origin
+
 # 查看状态
 git status
 
 # 查看提交历史
 git log --oneline
+
+# 查看远程和本地的差异
+git log HEAD..origin/main
+
+# 回退到之前的提交
+git reset --hard HEAD~1
+
+# 撤销提交但保留更改
+git reset --soft HEAD~1
+
+# 创建新提交来撤销更改
+git revert HEAD
+
+# 合并分支
+git merge feature-branch
+
+# 解决冲突后继续
+git add .
+git commit
+
+# 取消合并
+git merge --abort
+
+# 强制推送（谨慎使用）
+git push origin main --force-with-lease
+
+# 暂存更改
+git stash
+
+# 恢复暂存的更改
+git stash pop
 ```
 
 ---
